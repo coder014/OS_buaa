@@ -1,4 +1,36 @@
 #include <types.h>
+#include <print.h>
+
+typedef struct _string_out_status {
+	char *buf;
+	size_t cur;
+} string_out_status;
+
+void *memcpy(void *dst, const void *src, size_t n);
+static void str_out(void *data, const char *buf, size_t len);
+
+int sprintf(char *buf, const char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	string_out_status sos = {buf, 0};
+	vprintfmt(str_out, (void *)(&sos), fmt, ap);
+	sos.buf[sos.cur] = '\0';
+	va_end(ap);
+	return sos.cur;
+}
+
+static void str_out(void *data, const char *buf, size_t len)
+{
+/*	printk("strout called: len=%lu ", len);
+	for(int i=0;i<len;i++)
+		printk("%c", buf[i]);
+*/
+//	printk("\n");
+	string_out_status *sos = (string_out_status *)data;
+	char *cur = sos->buf + sos->cur;
+	memcpy(cur, buf, len);
+	sos->cur += len;
+}
 
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;

@@ -10,4 +10,6 @@ char *strcpy(char *dst, const char *src);
 const char *strchr(const char *s, int c);
 int strcmp(const char *p, const char *q);
 
+int sprintf(char *buf, const char *fmt, ...);
+
 #endif
