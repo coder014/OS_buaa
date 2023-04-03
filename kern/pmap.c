@@ -315,6 +315,22 @@ void page_remove(Pde *pgdir, u_int asid, u_long va) {
 	return;
 }
 
+u_int page_perm_stat(Pde *pgdir, struct Page *pp, u_int perm_mask)
+{
+	u_long paaddr=page2pa(pp);
+	u_int res=0;
+	for(int i=0; i<1024; i++) {
+		if(*(pgdir+i) & PTE_V) {
+			Pte *pt=(Pte*)KADDR(PTE_ADDR(*(pgdir+i)));
+			for(int j=0; j<1024; j++) {
+				if((*(pt+j) & PTE_V) && PPN(paaddr)==PPN(*(pt+j)) && (*(pt+j) & perm_mask)==perm_mask)
+					res++;
+			}
+		}
+	}
+	return res;
+}
+
 /* Overview:
  *   Invalidate the TLB entry with specified 'asid' and virtual address 'va'.
  *
