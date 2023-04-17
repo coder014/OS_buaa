@@ -3,9 +3,11 @@
 #include <stackframe.h>
 
 .macro BUILD_HANDLER exception handler
-NESTED(handle_\exception, TF_SIZE, zero)
+NESTED(handle_\exception, TF_SIZE + 8, zero)
 	move    a0, sp
+	addiu   sp, sp, -8
 	jal     \handler
+	addiu   sp, sp, 8
 	j       ret_from_exception
 END(handle_\exception)
 .endm
@@ -35,6 +37,7 @@ timer_irq:
 END(handle_int)
 
 BUILD_HANDLER tlb do_tlb_refill
+BUILD_HANDLER ov do_ov
 
 #if !defined(LAB) || LAB >= 4
 BUILD_HANDLER mod do_tlb_mod
