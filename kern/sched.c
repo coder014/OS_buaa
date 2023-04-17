@@ -17,32 +17,36 @@
 void schedule(int yield) {
 	static int count = 0; // remaining time slices of current env
 	struct Env *e = curenv;
+	static int user_time[5] = {0};
+	int users[5] = {0};
 
-	/* We always decrease the 'count' by 1.
-	 *
-	 * If 'yield' is set, or 'count' has been decreased to 0, or 'e' (previous 'curenv') is
-	 * 'NULL', or 'e' is not runnable, then we pick up a new env from 'env_sched_list' (list of
-	 * all runnable envs), set 'count' to its priority, and schedule it with 'env_run'. **Panic
-	 * if that list is empty**.
-	 *
-	 * (Note that if 'e' is still a runnable env, we should move it to the tail of
-	 * 'env_sched_list' before picking up another env from its head, or we will schedule the
-	 * head env repeatedly.)
-	 *
-	 * Otherwise, we simply schedule 'e' again.
-	 *
-	 * You may want to use macros below:
-	 *   'TAILQ_FIRST', 'TAILQ_REMOVE', 'TAILQ_INSERT_TAIL'
-	 */
-	/* Exercise 3.12: Your code here. */
+	struct Env *_e;
+	TAILQ_FOREACH(_e, &env_sched_list, env_sched_link) {
+		users[_e->env_user]++;
+	}
+
 	if(yield || count==0 || e==NULL || e->env_status!=ENV_RUNNABLE) {
 		if(e && e->env_status==ENV_RUNNABLE) {
 			TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
 			TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+			user_time[e->env_user]+=e->env_pri;
 		}
 		if(TAILQ_EMPTY(&env_sched_list))
 			panic("No runnable env to schedule!");
-		e=TAILQ_FIRST(&env_sched_list);
+		int u, maxt=0x7FFFFFFF;
+		for(int i=0; i<5; i++) {
+			if(users[i] && user_time[i]<maxt) {
+				maxt=user_time[i];
+				u=i;
+			}
+		}
+		TAILQ_FOREACH(_e, &env_sched_list, env_sched_link) {
+			if(_e->env_user == u) {
+				e = _e;
+				break;
+			}
+		}
+		//e=TAILQ_FIRST(&env_sched_list);
 		count=e->env_pri;
 	}
 	--count;
