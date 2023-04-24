@@ -17,6 +17,14 @@ void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm) {
 	user_assert(r == 0);
 }
 
+void ipc_broadcast(u_int value, const void *srcva, u_int perm) {
+        int r;
+        while ((r = syscall_ipc_broadcast(value, srcva, perm)) == -E_IPC_NOT_RECV) {
+                syscall_yield();
+        }
+        user_assert(r == 0);
+}
+
 // Receive a value.  Return the value and store the caller's envid
 // in *whom.
 //

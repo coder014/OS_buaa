@@ -368,6 +368,81 @@ int sys_ipc_recv(u_int dstva) {
 	schedule(1);
 }
 
+extern struct Env envs[NENV];
+
+static int check_env_parent(u_int envn) {
+	struct Env *e;
+	if(envid2env(envs[envn].env_id, &e, 0)!=0) return 0;
+
+	while (e->env_parent_id != 0 && e->env_parent_id != curenv->env_id) {
+		if(envid2env(e->env_parent_id, &e, 0)!=0) return 0;
+	}
+
+	if (e->env_parent_id != curenv->env_id) {
+		return 0;
+	}
+	return 1;
+}
+
+
+int sys_ipc_broadcast(u_int value, const void *srcva, u_int perm) {
+	u_int child_envs[NENV];
+	int child_env_len = 0;
+	struct Env *e;
+	struct Page *p;
+
+	/* Step 1: Check if 'srcva' is either zero or a legal address. */
+	/* Exercise 4.8: Your code here. (4/8) */
+	if(srcva && is_illegal_va(srcva)) return -E_INVAL;
+
+	/* Step 2: Convert 'envid' to 'struct Env *e'. */
+	/* This is the only syscall where the 'envid2env' should be used with 'checkperm' UNSET,
+	 * because the target env is not restricted to 'curenv''s children. */
+	/* Exercise 4.8: Your code here. (5/8) */
+	for(int i=0; i<NENV; i++) {
+		//printk("checking i = %d\n", i);
+		if(check_env_parent(i))
+		{
+			//printk("found child id = %d\n", envs[i].env_id);
+			child_envs[child_env_len++] = i;
+		}
+	}
+
+	for(int i=0; i<child_env_len; i++) {
+	envid2env(envs[child_envs[i]].env_id, &e, 0);
+
+	/* Step 3: Check if the target is waiting for a message. */
+	/* Exercise 4.8: Your code here. (6/8) */
+	if(!e->env_ipc_recving) return -E_IPC_NOT_RECV;
+	}
+
+	for(int i=0; i<child_env_len; i++) {
+	envid2env(envs[child_envs[i]].env_id, &e, 0);
+	/* Step 4: Set the target's ipc fields. */
+	e->env_ipc_value = value;
+	e->env_ipc_from = curenv->env_id;
+	e->env_ipc_perm = PTE_V | perm;
+	e->env_ipc_recving = 0;
+
+	/* Step 5: Set the target's status to 'ENV_RUNNABLE' again and insert it to the tail of
+	 * 'env_sched_list'. */
+	/* Exercise 4.8: Your code here. (7/8) */
+	e->env_status = ENV_RUNNABLE;
+	TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+
+	/* Step 6: If 'srcva' is not zero, map the page at 'srcva' in 'curenv' to 'e->env_ipc_dstva'
+	 * in 'e'. */
+	/* Return -E_INVAL if 'srcva' is not zero and not mapped in 'curenv'. */
+	if (srcva != 0) {
+		/* Exercise 4.8: Your code here. (8/8) */
+		if(!(p=page_lookup(curenv->env_pgdir, srcva, NULL))) return -E_INVAL;
+		try(page_insert(e->env_pgdir, e->env_asid, p, e->env_ipc_dstva, perm));
+	}
+	}
+	return 0;
+
+}
+
 /* Overview:
  *   Try to send a 'value' (together with a page if 'srcva' is not 0) to the target env 'envid'.
  *
@@ -501,6 +576,7 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_ipc_broadcast] = sys_ipc_broadcast,
 };
 
 /* Overview:
