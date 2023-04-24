@@ -7,6 +7,54 @@
 #include <syscall.h>
 
 extern struct Env *curenv;
+static inline int is_illegal_va(u_long va);
+
+void sys_set_gid(u_int gid) {
+	curenv->env_gid = gid;
+}
+
+int sys_ipc_group_send(u_int whom, u_int val, const void *srcva, u_int perm) {
+	struct Env *e;
+	struct Page *p;
+
+	/* Step 1: Check if 'srcva' is either zero or a legal address. */
+	/* Exercise 4.8: Your code here. (4/8) */
+	if(srcva && is_illegal_va(srcva)) return -E_INVAL;
+
+	/* Step 2: Convert 'envid' to 'struct Env *e'. */
+	/* This is the only syscall where the 'envid2env' should be used with 'checkperm' UNSET,
+	 * because the target env is not restricted to 'curenv''s children. */
+	/* Exercise 4.8: Your code here. (5/8) */
+	try(envid2env(whom, &e, 0));
+
+	/* Step 3: Check if the target is waiting for a message. */
+	/* Exercise 4.8: Your code here. (6/8) */
+	if(!e->env_ipc_recving) return -E_IPC_NOT_RECV;
+
+	if(curenv->env_gid != e->env_gid) return -E_IPC_NOT_GROUP;
+
+	/* Step 4: Set the target's ipc fields. */
+	e->env_ipc_value = val;
+	e->env_ipc_from = curenv->env_id;
+	e->env_ipc_perm = PTE_V | perm;
+	e->env_ipc_recving = 0;
+
+	/* Step 5: Set the target's status to 'ENV_RUNNABLE' again and insert it to the tail of
+	 * 'env_sched_list'. */
+	/* Exercise 4.8: Your code here. (7/8) */
+	e->env_status = ENV_RUNNABLE;
+	TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+
+	/* Step 6: If 'srcva' is not zero, map the page at 'srcva' in 'curenv' to 'e->env_ipc_dstva'
+	 * in 'e'. */
+	/* Return -E_INVAL if 'srcva' is not zero and not mapped in 'curenv'. */
+	if (srcva != 0) {
+		/* Exercise 4.8: Your code here. (8/8) */
+		if(!(p=page_lookup(curenv->env_pgdir, srcva, NULL))) return -E_INVAL;
+		try(page_insert(e->env_pgdir, e->env_asid, p, e->env_ipc_dstva, perm));
+	}
+	return 0;
+}
 
 /* Overview:
  * 	This function is used to print a character on screen.
@@ -501,6 +549,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_set_gid] = sys_set_gid,
+    [SYS_ipc_group_send] = sys_ipc_group_send
 };
 
 /* Overview:

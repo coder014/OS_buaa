@@ -42,9 +42,14 @@ void _user_halt(const char *, int, const char *, ...) __attribute__((noreturn));
 int spawn(char *prog, char **argv);
 int spawnl(char *prot, char *args, ...);
 int fork(void);
+void set_gid(u_int gid);
+int ipc_group_send(u_int whom, u_int val, const void *srcva, u_int perm);
 
 /// syscalls
 extern int msyscall(int, ...);
+
+void syscall_set_gid(u_int gid);
+int syscall_ipc_try_group_send(u_int whom, u_int val, const void *srcva, u_int perm);
 
 void syscall_putchar(int ch);
 int syscall_print_cons(const void *str, u_int num);
