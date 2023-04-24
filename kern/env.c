@@ -94,6 +94,7 @@ static void map_segment(Pde *pgdir, u_int asid, u_long pa, u_long va, u_int size
 u_int mkenvid(struct Env *e) {
 	static u_int i = 0;
 	return ((++i) << (1 + LOG2NENV)) | (e - envs);
+	printk("make %u\n", i);
 }
 
 /* Overview:
@@ -118,6 +119,12 @@ int envid2env(u_int envid, struct Env **penv, int checkperm) {
 	 *   You may want to use 'ENVX'.
 	 */
 	/* Exercise 4.3: Your code here. (1/2) */
+	if (envid == 0) {
+		*penv = curenv;
+		return 0;
+	} else {
+		e = &envs[ENVX(envid)];
+	}
 
 	if (e->env_status == ENV_FREE || e->env_id != envid) {
 		return -E_BAD_ENV;
@@ -130,6 +137,9 @@ int envid2env(u_int envid, struct Env **penv, int checkperm) {
 	 *   If violated, return '-E_BAD_ENV'.
 	 */
 	/* Exercise 4.3: Your code here. (2/2) */
+	if (checkperm && e->env_id!=curenv->env_id && e->env_parent_id!=curenv->env_id) {
+		return -E_BAD_ENV;
+	}
 
 	/* Step 3: Assign 'e' to '*penv'. */
 	*penv = e;

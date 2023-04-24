@@ -46,5 +46,6 @@ void schedule(int yield) {
 		count=e->env_pri;
 	}
 	--count;
+	//printk("switching %x to %x\n", curenv ? curenv->env_id : 0, e->env_id);
 	env_run(e);
 }
