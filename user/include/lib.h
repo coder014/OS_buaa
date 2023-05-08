@@ -42,6 +42,8 @@ void _user_halt(const char *, int, const char *, ...) __attribute__((noreturn));
 int spawn(char *prog, char **argv);
 int spawnl(char *prot, char *args, ...);
 int fork(void);
+void barrier_alloc(int n);
+void barrier_wait(void);
 
 /// syscalls
 extern int msyscall(int, ...);

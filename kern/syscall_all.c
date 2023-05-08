@@ -482,6 +482,32 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return 0;
 }
 
+static int barrier = -1, barriered_cnt = 0;
+static u_int barriered_env[64];
+void sys_barrier_alloc(int n) {
+	barrier = n;
+}
+
+void sys_barrier_wait(void) {
+	if(barrier<0) return;
+	//printk("env %x barrier wait, barrier %d remains.\n", curenv->env_id, barrier-barriered_cnt-1);
+	barriered_env[barriered_cnt++] = curenv->env_id;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	TAILQ_REMOVE(&env_sched_list, curenv, env_sched_link);
+	if(barriered_cnt >= barrier) {
+		barrier = -1;
+		for (int i = barriered_cnt - 1; i >= 0; i--) {
+			struct Env *env;
+			envid2env(barriered_env[i], &env, 0);
+			env->env_status = ENV_RUNNABLE;
+			TAILQ_INSERT_TAIL(&env_sched_list, env, env_sched_link);
+		}
+		barriered_cnt = 0;
+	} else {
+		schedule(1);
+	}
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -501,6 +527,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_barrier_alloc] = sys_barrier_alloc,
+    [SYS_barrier_wait] = sys_barrier_wait,
 };
 
 /* Overview:

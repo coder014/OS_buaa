@@ -4,6 +4,14 @@
 #include <lib.h>
 #include <mmu.h>
 
+void barrier_alloc(int n) {
+	msyscall(SYS_barrier_alloc, n);
+}
+
+void barrier_wait(void) {
+	msyscall(SYS_barrier_wait);
+}
+
 // Send val to whom.  This function keeps trying until
 // it succeeds.  It should panic() on any error other than
 // -E_IPC_NOT_RECV.
