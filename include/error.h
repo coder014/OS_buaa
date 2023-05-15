@@ -50,9 +50,9 @@
  */
 #define try(expr)                                                                                  \
 	do {                                                                                       \
-		int r = (expr);                                                                    \
-		if (r != 0)                                                                        \
-			return r;                                                                  \
+		int __r = (expr);                                                                    \
+		if (__r != 0)                                                                        \
+			return __r;                                                                  \
 	} while (0)
 
 #endif // _ERROR_H_

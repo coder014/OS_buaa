@@ -1,4 +1,6 @@
 #include <drivers/dev_cons.h>
+#include <drivers/dev_disk.h>
+#include <drivers/dev_rtc.h>
 #include <env.h>
 #include <mmu.h>
 #include <pmap.h>
@@ -461,6 +463,12 @@ int sys_cgetc(void) {
  */
 int sys_write_dev(u_int va, u_int pa, u_int len) {
 	/* Exercise 5.1: Your code here. (1/2) */
+	if(is_illegal_va_range(va, len)) return -E_INVAL;
+	if(pa+len < pa) return -E_INVAL;
+	if((pa<DEV_CONS_ADDRESS || pa+len>DEV_CONS_ADDRESS+DEV_CONS_LENGTH)
+		&& (pa<DEV_DISK_ADDRESS || pa+len>DEV_DISK_ADDRESS+DEV_DISK_BUFFER+DEV_DISK_BUFFER_LEN)
+		&& (pa<DEV_RTC_ADDRESS || pa+len>DEV_RTC_ADDRESS+DEV_RTC_LENGTH)) return -E_INVAL;
+	memcpy(KSEG1+pa, va, len);
 
 	return 0;
 }
@@ -478,6 +486,12 @@ int sys_write_dev(u_int va, u_int pa, u_int len) {
  */
 int sys_read_dev(u_int va, u_int pa, u_int len) {
 	/* Exercise 5.1: Your code here. (2/2) */
+	if(is_illegal_va_range(va, len)) return -E_INVAL;
+	if(pa+len < pa) return -E_INVAL;
+	if((pa<DEV_CONS_ADDRESS || pa+len>DEV_CONS_ADDRESS+DEV_CONS_LENGTH)
+		&& (pa<DEV_DISK_ADDRESS || pa+len>DEV_DISK_ADDRESS+DEV_DISK_BUFFER+DEV_DISK_BUFFER_LEN)
+		&& (pa<DEV_RTC_ADDRESS || pa+len>DEV_RTC_ADDRESS+DEV_RTC_LENGTH)) return -E_INVAL;
+	memcpy(va, KSEG1+pa, len);
 
 	return 0;
 }
