@@ -7,6 +7,76 @@
 #include <lib.h>
 #include <mmu.h>
 
+#define NSSDBLK 32
+#define SSD_NO_MAPPING 0xFF
+u_int ssd_map[NSSDBLK];
+u_int ssd_bitmap[NSSDBLK];
+u_int ssd_ecnt[NSSDBLK];
+uint8_t ssd_zerodata[BY2SECT] = {0};
+
+void ssd_init() {
+	for(int i=0; i<NSSDBLK; i++) {
+		ssd_map[i]=SSD_NO_MAPPING;
+		ssd_bitmap[i]=1;
+		ssd_ecnt[i]=0;
+	}
+}
+int ssd_read(u_int logic_no, void *dst) {
+	if(ssd_map[logic_no]==SSD_NO_MAPPING) return -1;
+	ide_read(0, ssd_map[logic_no], dst, 1);
+}
+static u_int ssd_alloc(void) {
+	u_int mincnt = 0x7fffffffU, findno;
+	for(int i=0; i<NSSDBLK; i++) {
+		if(ssd_bitmap[i] && ssd_ecnt[i]<mincnt)
+			mincnt=ssd_ecnt[i];
+	}
+	for(findno=0; findno<NSSDBLK; findno++) {
+		if(ssd_bitmap[findno] && ssd_ecnt[findno]==mincnt)
+			break;
+	}
+	if(mincnt>=5) { // heavy-load swap
+		mincnt = 0x7fffffffU;
+		u_int findno1;
+		for(int i=0; i<NSSDBLK; i++) {
+                	if(!ssd_bitmap[i] && ssd_ecnt[i]<mincnt)
+                        	mincnt=ssd_ecnt[i];
+        	}
+	        for(findno1=0; findno1<NSSDBLK; findno1++) {
+        	        if(!ssd_bitmap[findno1] && ssd_ecnt[findno1]==mincnt)
+                	        break;
+        	}
+		uint8_t swp[BY2SECT];
+		ide_read(0, findno1, (void *)swp, 1);
+		ide_write(0, findno, (void *)swp, 1);
+		ssd_bitmap[findno]=0;
+		for(int i=0; i<NSSDBLK; i++) {
+			if(ssd_map[i]==findno1)
+				ssd_map[i]=findno;
+		}
+		ide_write(0, findno1, (void *)ssd_zerodata, 1);
+	        ssd_bitmap[findno1] = 1;
+        	++ssd_ecnt[findno1];
+	        return findno1;
+	}
+	return findno;
+}
+void ssd_write(u_int logic_no, void *src) {
+	if(ssd_map[logic_no]!=SSD_NO_MAPPING) {
+		ssd_erase(logic_no);
+	}
+	ssd_map[logic_no] = ssd_alloc();
+	ide_write(0, ssd_map[logic_no], src, 1);
+	ssd_bitmap[ssd_map[logic_no]] = 0;
+}
+void ssd_erase(u_int logic_no) {
+	if(ssd_map[logic_no]==SSD_NO_MAPPING) return;
+	ide_write(0, ssd_map[logic_no], (void *)ssd_zerodata, 1);
+        ssd_bitmap[ssd_map[logic_no]] = 1;
+	++ssd_ecnt[ssd_map[logic_no]];
+	ssd_map[logic_no] = SSD_NO_MAPPING;
+}
+
 // Overview:
 //  read data from IDE disk. First issue a read request through
 //  disk register and then copy data from disk buffer
