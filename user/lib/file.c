@@ -25,6 +25,7 @@ struct Dev devfile = {
 // Returns:
 //  the file descriptor on success,
 //  the underlying error on failure.
+char symbuf[MAXNAMELEN + 1];
 int open(const char *path, int mode) {
 
 	// Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
@@ -56,7 +57,17 @@ int open(const char *path, int mode) {
 
 	// Step 5: Return the number of file descriptor using 'fd2num'.
 	/* Exercise 5.9: Your code here. (5/5) */
-	return fd2num(fd);
+	//debugf("trying to open file %s\n", ffd->f_file.f_name);
+	if(ffd->f_file.f_type == FTYPE_LNK) {
+		int _r = file_read(fd, symbuf, MAXNAMELEN, 0);
+		symbuf[_r] = '\0';
+		//debugf("trying to reopen symlink file %s -> %s\n", ffd->f_file.f_name, symbuf);
+		_r = open(symbuf, mode);
+		file_close(fd);
+		return _r;
+	} else {
+		return fd2num(fd);
+	}
 }
 
 // Overview:
