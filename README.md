@@ -1,5 +1,5 @@
 # !!! IMPORTANT !!!
-Due to errors in the testcases, the release of this branch will be delayed until an official explanation is given.
+Due to errors in the testcases, ~the release of this branch will be delayed until an official explanation is given~.
 
 Or you can refer to this may-be-correct branch (**in-class tests passed**).
 
