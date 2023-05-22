@@ -19,6 +19,27 @@ struct Dev devfile = {
     .dev_stat = file_stat,
 };
 
+int openat(int dirfd, const char *path, int mode) {
+	struct Fd *fd, *dir;
+	try(fd_lookup(dirfd, &dir));
+	try(fd_alloc(&fd));
+	try(fsipc_openat(((struct Filefd *)dir)->f_fileid, path, mode, fd));
+
+	char *va;
+	struct Filefd *ffd;
+	u_int size, fileid;
+	va = fd2data(fd);
+	ffd = (struct Filefd *)fd;
+	size = ffd->f_file.f_size;
+	fileid = ffd->f_fileid;
+
+	for (int i = 0; i < size; i += BY2PG) {
+		try(fsipc_map(fileid, i, va+i));
+	}
+
+	return fd2num(fd);
+}
+
 // Overview:
 //  Open a file (or directory).
 //

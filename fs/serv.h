@@ -23,6 +23,7 @@ void ide_write(u_int diskno, u_int secno, void *src, u_int nsecs);
 
 /* fs.c */
 int file_open(char *path, struct File **pfile);
+int file_openat(struct File *dir, char *path, struct File **file);
 int file_get_block(struct File *f, u_int blockno, void **pblk);
 int file_set_size(struct File *f, u_int newsize);
 void file_close(struct File *f);

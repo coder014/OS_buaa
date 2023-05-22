@@ -93,6 +93,7 @@ int printf(const char *fmt, ...);
 
 // fsipc.c
 int fsipc_open(const char *, u_int, struct Fd *);
+int fsipc_openat(u_int dir_fileid, const char *path, u_int omode, struct Fd *fd);
 int fsipc_map(u_int, u_int, void *);
 int fsipc_set_size(u_int, u_int);
 int fsipc_close(u_int);
@@ -114,6 +115,7 @@ int stat(const char *path, struct Stat *);
 
 // file.c
 int open(const char *path, int mode);
+int openat(int dirfd, const char *path, int mode);
 int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);
